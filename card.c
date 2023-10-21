@@ -34,7 +34,27 @@ void village_action(player_t *player, char **arg) {
 }
 card_t village = { "village", ACTION, 10, 3, 0, 0, village_action };
 
-card_t *card_list[] = { &copper, &silver, &gold, &curse, &estate, &duchy, &province, &smithy, &chapel, &village };
+void militia_action(player_t *player, char **arg) {
+  int i;
+  player->num_coins+= 2;
+  for (i = 0; i < NUM_PLAYERS; i++) {
+    player_t * player1 = &player_list[i];
+    if (player1->phase == END) {
+      if (player1->engine == engine_human) { player_print(player1, player1); }
+      while (node_length_full(player1->hand) > 3) {
+	printf("discard ");
+	char *command = player1->engine(player1, DISCARD);
+	printf("%s\n", command);
+	card_t *card = str_to_card(command);
+	if (!card) { continue; }
+	discard(player1, card);
+      }
+    }
+  }
+}
+card_t militia = { "militia", ACTION, 10, 4, 0, 0, militia_action };
+
+card_t *card_list[] = { &copper, &silver, &gold, &curse, &estate, &duchy, &province, &smithy, &chapel, &village, &militia };
 player_t player_list[NUM_PLAYERS];
 
 int shuffle(player_t *player) {
@@ -147,6 +167,23 @@ int put_in_play(player_t *player, card_t *card) {
       if (node_preinsert(&player->in_play, card)) { exit(EXIT_FAILURE); }
       return 0;
     }
+    current = current->next;
+  }
+  return 1;
+}
+
+int discard(player_t *player, card_t *card) {
+  node_t *current = player->hand;
+  if (!current) { return 1; }
+  while (current->prev) { current = current->prev; }
+  while (current) {
+    if (current->card == card) {
+      if (current == player->hand) { node_remove(&player->hand); }
+      else { node_remove(&current); }
+      if (node_preinsert(&player->discard, card)) { exit(EXIT_FAILURE); }
+      return 0;
+    }
+    current = current->next;
   }
   return 1;
 }
@@ -209,24 +246,25 @@ void node_print(node_t *current) {
   printf("\n");
 }
 
-/* void player_print_debug(player_t *player) { */
-/*   char *phase; */
-/*   switch (player->phase) { */
-/*   case ACT: phase = "act"; break; */
-/*   case BUY: phase = "buy"; break; */
-/*   case END: phase = "end"; break; */
-/*   } */
-/*   printf("%s (%d/%d/%d/%s)\n", player->name, player->num_actions, player->num_buys, player->num_coins, phase); */
-/*   printf("DECK: "); */
-/*   node_print(player->deck); */
-/*   printf("HAND: "); */
-/*   node_print(player->hand); */
-/*   printf("IN PLAY: "); */
-/*   node_print(player->in_play); */
-/*   printf("DISCARD: "); */
-/*   node_print(player->discard); */
-/*   printf("\n"); */
-/* } */
+// DEBUG
+void player_print_debug(player_t *player) {
+  char *phase;
+  switch (player->phase) {
+  case ACT: phase = "act"; break;
+  case BUY: phase = "buy"; break;
+  case END: phase = "end"; break;
+  }
+  printf("%s (%d/%d/%d/%s)\n", player->name, player->num_actions, player->num_buys, player->num_coins, phase);
+  printf("DECK: ");
+  node_print(player->deck);
+  printf("HAND: ");
+  node_print(player->hand);
+  printf("IN PLAY: ");
+  node_print(player->in_play);
+  printf("DISCARD: ");
+  node_print(player->discard);
+  printf("\n");
+}
 
 void player_print(player_t *player, player_t *requester) {
   char *phase;

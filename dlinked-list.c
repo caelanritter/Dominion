@@ -61,6 +61,12 @@ size_t node_length(node_t *head) {
   return node_length(head->next) + 1;
 }
 
+size_t node_length_full(node_t *current) {
+  if (current == NULL) {return 0; }
+  while (current->prev) { current = current->prev; }
+  return node_length(current);
+}
+
 node_t * node_shuffle(node_t *head) {
   size_t length, i;
   node_t *current, *new = NULL;

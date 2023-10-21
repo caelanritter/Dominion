@@ -26,7 +26,7 @@ node_error_t node_create(node_t **, card_t *);
 /* inserts a node with the given data immediately before the current node, and shifts the pointer back one step */
 node_error_t node_preinsert(node_t **, card_t *);
 
-/* inserts a node wnnnnnnith the given data immediately after the current node */
+/* inserts a node with the given data immediately after the current node */
 node_error_t node_insert(node_t *, card_t *);
 
 /* removes the current node points it at the next node */
@@ -34,6 +34,9 @@ node_error_t node_remove(node_t **);
 
 /* returns the length of a list starting at the given node */
 size_t node_length(node_t *);
+
+/* returns the full length of a list */
+size_t node_length_full(node_t *);
 
 /* shuffles the list and returns a pointer to the head node */
 node_t * node_shuffle(node_t *);

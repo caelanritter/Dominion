@@ -7,9 +7,9 @@
 #include "card.h"
 
 /* a basic player engine */
-char * engine_big_money_smithy(player_t *);
+char * engine_big_money_smithy(player_t *, force_t);
 /* waits for human input */
-char * engine_human(player_t *);
+char * engine_human(player_t *, force_t);
 
 int main(void) {
   //player_t player[NUM_PLAYERS];
@@ -26,10 +26,8 @@ int main(void) {
     sprintf(player_list[i].name, "Player %c", 'A' + i);
     for (j = 0; j < 7; j++) { gain(player_list + i, &copper); }
     for (j = 0; j < 3; j++) { gain(player_list + i, &estate); }
-    // tmp
+    // DEBUG
     /* gain(player_list + i, &chapel); */
-    /* gain(player_list + i, &smithy); */
-    // end tmp
     shuffle(player_list + i);
     for (j = 0; j < 5; j++) { draw(player_list + i); }
   }
@@ -67,7 +65,7 @@ int main(void) {
       char **arg = calloc(arg_num, sizeof(char *));
 
       /* player command */
-      char *command = player_list[i].engine(player_list + i);
+      char *command = player_list[i].engine(player_list + i, TURN);
       if (player_list[i].engine != engine_human) { printf("%s\n", command); }
       
       /* parse command into arguments */
@@ -119,7 +117,9 @@ int main(void) {
       if (arg_num == 0) { continue; }
       if (!strcmp(arg[0], "pass")) { break; }
       if (!strcmp(arg[0], "look")) {
-	player_print(player_list + i, player_list + i);
+	// DEBUG
+	if (arg_num > 1) { player_print_debug(player_list + atoi(arg[1])); }
+	else { player_print(player_list + i, player_list + i); }
 	continue;
       }
       if (arg_num == 1) { continue; }
@@ -155,6 +155,8 @@ int main(void) {
       if (player_list[i].num_actions == 0 && player_list[i].phase == ACT) { player_list[i].phase = BUY; }
       if (player_list[i].num_buys == 0 && player_list[i].phase == BUY) { player_list[i].phase = END; }
     }
+    player_list[i].phase = END;
+    
     if (game_end) { break; }
     
     /* cleanup */
@@ -201,84 +203,106 @@ int main(void) {
   /* } */
 }
 
-char * engine_human(player_t *player) {
-  /* weird stuff happens if one removes `static` and hits enter a bunch of times */
+char * engine_human(player_t *player, force_t force) {
   static char *command;
   size_t command_size;
-  /* play all treasures */
-  if (command && !strcmp(command, "t\n")) {
-    node_t *current = player->hand;
-    while (current) {
-      if (current->card->type == TREASURE) {
-	static char command_[30] = "";
-	snprintf(command_, 30, "%s %s", "play", current->card->name);
-	return command_;
+  switch (force) {
+  case TURN:
+    /* weird stuff happens if one removes `static` and hits enter a bunch of times */
+    /* play all treasures */
+    if (command && !strcmp(command, "t\n")) {
+      node_t *current = player->hand;
+      while (current) {
+	if (current->card->type == TREASURE) {
+	  static char command_[30] = "";
+	  snprintf(command_, 30, "%s %s", "play", current->card->name);
+	  return command_;
+	}
+	current = current->next;
       }
-      current = current->next;
     }
-  }
-  free(command);
-  command = NULL;
-  getline(&command, &command_size, stdin);
-  return command;
+    free(command);
+    command = NULL;
+    getline(&command, &command_size, stdin);
+    return command;
+  case DISCARD:
+    free(command);
+    command = NULL;
+    getline(&command, &command_size, stdin);
+    return command;
+  default:
+    return NULL;
+  }  
 }
 
-char * engine_big_money_smithy(player_t *player) {
-  switch (player->phase) {
-  case ACT:
-    /* first play a smithy if possible */
-    if (find(player->hand, &smithy)) {
-      return "play smithy";
-    }
-  case BUY:
-    double smithy_ratio, critical_smithy_ratio;
-    /* play a treasure if possible */
-    node_t *current = player->hand;
-    while (current) {
-      if (current->card->type == TREASURE) {
-	static char command[30] = "";
-	snprintf(command, 30, "%s %s", "play", current->card->name);
-	return command;
-      }
-      current = current->next;
-    }
-    /* determine the ratio of smithies in the entire deck */
-    {
-      int smithy_count = 0, total = 0;
-      if (!strcmp(player->name, "Player A")) { critical_smithy_ratio = 0.1; }
-      else { critical_smithy_ratio = 0.2; }
-      int count_cards(node_t *current, card_t *card) {
-	if (current == NULL) { return 0; }
-	while (current->prev != NULL) { current = current->prev; }
-	if (card == NULL) {
-	  return node_length(current);
+char * engine_big_money_smithy(player_t *player, force_t force) {
+  switch (force) {
+  case TURN:
+    switch (player->phase) {
+      case ACT:
+	/* first play a smithy if possible */
+	if (find(player->hand, &smithy)) {
+	  return "play smithy";
 	}
-	int count = 0;
-	while(current != NULL) {
-	  count += (current->card == card);
+      case BUY:
+	double smithy_ratio, critical_smithy_ratio;
+	/* play a treasure if possible */
+	node_t *current = player->hand;
+	while (current) {
+	  if (current->card->type == TREASURE) {
+	    static char command[30] = "";
+	    snprintf(command, 30, "%s %s", "play", current->card->name);
+	    return command;
+	  }
 	  current = current->next;
 	}
-	return count;
+	/* determine the ratio of smithies in the entire deck */
+	{
+	  int smithy_count = 0, total = 0;
+	  if (!strcmp(player->name, "Player A")) { critical_smithy_ratio = 0.1; }
+	  else { critical_smithy_ratio = 0.2; }
+	  int count_cards(node_t *current, card_t *card) {
+	    if (current == NULL) { return 0; }
+	    while (current->prev != NULL) { current = current->prev; }
+	    if (card == NULL) {
+	      return node_length(current);
+	    }
+	    int count = 0;
+	    while(current != NULL) {
+	      count += (current->card == card);
+	      current = current->next;
+	    }
+	    return count;
+	  }
+	  smithy_count += count_cards(player->deck, &smithy);
+	  smithy_count += count_cards(player->hand, &smithy);
+	  smithy_count += count_cards(player->in_play, &smithy);
+	  smithy_count += count_cards(player->discard, &smithy);
+	  total += count_cards(player->deck, NULL);
+	  total += count_cards(player->hand, NULL);
+	  total += count_cards(player->in_play, NULL);
+	  total += count_cards(player->discard, NULL);
+	  smithy_ratio = (double)smithy_count / total;
+	}
+	/* buy phase */
+	if (player->num_coins >= 8) { return "buy province"; }
+	else if (player->num_coins >= 5 && province.supply == 1) { return "buy duchy"; }
+	else if (player->num_coins >= 2 && province.supply == 1) { return "buy estate"; }
+	else if (player->num_coins >= 6) { return "buy gold"; }
+	else if (player->num_coins >= 4 && smithy_ratio < critical_smithy_ratio) { return "buy smithy"; }
+	else if (player->num_coins >= 3) { return "buy silver"; }
+      case END:
+	break;
       }
-      smithy_count += count_cards(player->deck, &smithy);
-      smithy_count += count_cards(player->hand, &smithy);
-      smithy_count += count_cards(player->in_play, &smithy);
-      smithy_count += count_cards(player->discard, &smithy);
-      total += count_cards(player->deck, NULL);
-      total += count_cards(player->hand, NULL);
-      total += count_cards(player->in_play, NULL);
-      total += count_cards(player->discard, NULL);
-      smithy_ratio = (double)smithy_count / total;
-    }
-    /* buy phase */
-    if (player->num_coins >= 8) { return "buy province"; }
-    else if (player->num_coins >= 5 && province.supply == 1) { return "buy duchy"; }
-    else if (player->num_coins >= 2 && province.supply == 1) { return "buy estate"; }
-    else if (player->num_coins >= 6) { return "buy gold"; }
-    else if (player->num_coins >= 4 && smithy_ratio < critical_smithy_ratio) { return "buy smithy"; }
-    else if (player->num_coins >= 3) { return "buy silver"; }
-  case END:
-    break;
+      return "pass";
+  case DISCARD:
+    // TODO: make this AI less dumb
+    if (find(player->hand, &estate)) { return "estate"; }
+    else if (find(player->hand, &duchy)) { return "duchy"; }
+    else if (find(player->hand, &province)) { return "province"; }
+    else if (find(player->hand, &copper)) { return "copper"; }
+    else { return player->hand->card->name; }
+  default:
+    return NULL;
   }
-  return "pass";
 }

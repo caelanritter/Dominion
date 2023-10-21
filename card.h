@@ -6,6 +6,7 @@
 #define NUM_PLAYERS 2
 
 typedef enum { ACT, BUY, END } phase_t;
+typedef enum { TURN, DISCARD } force_t;
 typedef struct player player_t;
 struct player {
   char name[24];
@@ -18,7 +19,7 @@ struct player {
   int num_coins;
   phase_t phase;
   int vp;
-  char * (*engine)(player_t *);
+  char * (*engine)(player_t *, force_t);
 };
 
 typedef enum { VICTORY, TREASURE, ACTION } type_t;
@@ -31,6 +32,8 @@ typedef struct card {
   int tp;
   void (*action)(player_t *, char **);
 } card_t;
+
+char * engine_human(player_t *, force_t);
 
 extern int num_empty_piles;
 
@@ -48,6 +51,8 @@ void chapel_action(player_t *, char **);
 extern card_t chapel;
 void village_action(player_t *, char **);
 extern card_t village;
+void militia_action(player_t *, char **);
+extern card_t militia;
 
 extern card_t *card_list[];
 extern player_t player_list[NUM_PLAYERS];
@@ -69,6 +74,8 @@ int play(player_t *, card_t *, char **);
 
 int put_in_play(player_t *, card_t *);
 
+int discard(player_t *, card_t *);
+
 node_t * find(node_t *, card_t *);
 
 /* removes `node` from `src` and adds the card to `dest`; returns 1 if `node` is successfully removed but not added to `dest`, 0 otherwise */
@@ -80,7 +87,7 @@ card_t * str_to_card(char *);
 
 void node_print(node_t *);
 
-//void player_print_debug(player_t *);
+void player_print_debug(player_t *);
 
 void player_print(player_t *, player_t *);
 
