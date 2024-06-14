@@ -55,7 +55,9 @@ void militia_action(player_t *, char **);
 extern card_t militia;
 
 extern card_t *card_list[];
+extern unsigned int const num_cards;
 extern player_t player_list[NUM_PLAYERS];
+
 
 /* if the player's deck is empty, it shuffles the discard pile and makes it the deck */
 int shuffle(player_t *);

@@ -114,7 +114,19 @@ int main(void) {
       
       /* execute command */
       card_t *card = NULL;
-      if (arg_num == 0) { continue; }
+      if (arg_num == 0) {
+	printf("type \"help\" for a list of commands\n");
+	continue;
+      }
+      if (!strcmp(arg[0], "help")) {
+	printf("help - prints this help message\n"
+	       "pass - ends your turn\n"
+	       "look [NUM] - displays visible info about player NUM's deck; if NUM is left blank, displays your own info\n"
+	       "buy CARD - buys CARD from the supply\n"
+	       "play CARD [ARGS] - plays CARD with arguments ARGS from your hand\n"
+	       "supply [CARD] - prints how many CARDs remain in the supply; if CARD is left blank, prints the supply of every card in the kingdom\n");
+	continue;
+      }
       if (!strcmp(arg[0], "pass")) { break; }
       if (!strcmp(arg[0], "look")) {
 	// DEBUG
@@ -122,10 +134,27 @@ int main(void) {
 	else { player_print(player_list + i, player_list + i); }
 	continue;
       }
+      else if (!strcmp(arg[0], "supply")) {
+	if (arg_num > 1) {
+	  card = str_to_card(arg[1]);
+	  if (card) {
+	    printf("%d\n", card->supply);
+	    continue;
+	  }
+	  printf("invalid card; printing full list\n");
+	}
+	int k;
+	for (k = 0; k < num_cards; k++) {
+	  card = card_list[k];
+	  printf("%s %d\n", card->name, card->supply);
+	}
+      }
       if (arg_num == 1) { continue; }
       else {
 	card = str_to_card(arg[1]);
-	if (card == NULL) { continue; }
+	if (card == NULL) {
+	  printf("invalid card; ignoring\n");
+	  continue; }
       }
       if (!strcmp(arg[0], "buy")) {
 	if (buy(player_list + i, card)) { continue; }
@@ -142,7 +171,7 @@ int main(void) {
 	}
       }
       else if (!strcmp(arg[0], "supply")) {
-	printf("%d\n", card->supply);
+	
       }
       else { continue; }
 

@@ -55,6 +55,7 @@ void militia_action(player_t *player, char **arg) {
 card_t militia = { "militia", ACTION, 10, 4, 0, 0, militia_action };
 
 card_t *card_list[] = { &copper, &silver, &gold, &curse, &estate, &duchy, &province, &smithy, &chapel, &village, &militia };
+unsigned int const num_cards = sizeof(card_list) / sizeof(card_list[0]);
 player_t player_list[NUM_PLAYERS];
 
 int shuffle(player_t *player) {
@@ -230,7 +231,7 @@ void move_all(node_t **src, node_t **dest) {
 
 card_t * str_to_card(char *str) {
   int i;
-  for (i = 0; i < sizeof(card_list) / sizeof(card_list[0]); i++) {
+  for (i = 0; i < num_cards; i++) {
     if (!strcmp(str, card_list[i]->name)) { return card_list[i]; }
   }
   return NULL;
